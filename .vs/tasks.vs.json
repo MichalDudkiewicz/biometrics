@@ -1,0 +1,10 @@
+{
+  "version": "0.2.1",
+  "tasks": [
+    {
+      "taskLabel": "zadanie-EasyBMP",
+      "appliesTo": "BiometricsProject/EasyBMP/",
+      "type": "launch"
+    }
+  ]
+}
