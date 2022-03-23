@@ -1,17 +1,13 @@
-﻿# CMakeList.txt: projekt CMake dla elementu BiometricsProject, dołącz źródło i zdefiniuj
-# tutaj logikę specyficzną dla projektu.
-#
-cmake_minimum_required (VERSION 3.8)
+﻿cmake_minimum_required (VERSION 3.8)
 
-# Dodaj źródło do pliku wykonywalnego tego projektu.
-add_library(
-	EasyBMP
-	EasyBMP/EasyBMP.h
-	EasyBMP/EasyBMP.cpp
-)
+#tutaj dodajemy cpp-ki do naszej biblioteki do morfologii
+add_library (BiometricsProject
+        src/BiometricsProject.cpp
+        )
 
-add_executable (BiometricsProject "BiometricsProject.cpp" "BiometricsProject.h")
+add_subdirectory (thirdparty)
+
+target_include_directories(BiometricsProject PUBLIC include)
+target_include_directories(BiometricsProject PRIVATE thirdparty)
 
 target_link_libraries(BiometricsProject PRIVATE EasyBMP)
-
-# TODO: Dodaj testy i zainstaluj elementy docelowe w razie potrzeby.
