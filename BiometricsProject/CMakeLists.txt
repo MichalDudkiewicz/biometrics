@@ -13,3 +13,7 @@ target_include_directories(BiometricsProject PUBLIC include)
 target_include_directories(BiometricsProject PRIVATE thirdparty)
 
 target_link_libraries(BiometricsProject PRIVATE EasyBMP)
+
+find_package( OpenCV REQUIRED )
+target_include_directories(BiometricsProject PUBLIC ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(BiometricsProject PUBLIC ${OpenCV_LIBS})
