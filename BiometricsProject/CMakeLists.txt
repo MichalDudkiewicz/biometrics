@@ -3,9 +3,9 @@
 set(CMAKE_CXX_STANDARD 17)
 
 #tutaj dodajemy cpp-ki do naszej biblioteki do morfologii
-add_library (BiometricsProject
+add_executable (BiometricsProject
         src/BiometricsProject.cpp
-        )
+         )
 
 add_subdirectory (thirdparty)
 
