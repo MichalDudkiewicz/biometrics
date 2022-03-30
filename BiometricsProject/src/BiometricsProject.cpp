@@ -3,10 +3,16 @@
 #include "opencv2/core/mat.hpp"
 #include <opencv2/opencv.hpp>
 #include <opencv2/ximgproc.hpp>
+#include <tuple>
 
 enum MinutiaeType
 {
     End, Fork
+};
+
+enum MinutiaeDirection
+{
+    Horizontal, Vertical, DiagonalDecreasing, DiagonalIncreasing
 };
 
 struct Pixel
@@ -20,13 +26,13 @@ public:
     int x, y;
 };
 
-void printMinutaes(const std::vector<std::pair<Pixel, MinutiaeType>> &minutaes, cv::Mat& mat)
+void printMinutaes(const std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> &minutaes, cv::Mat& mat)
 {
     for (const auto& minutae : minutaes)
     {
-        for (int i = minutae.first.x - 1; i <= minutae.first.x + 1; i++)
+        for (int i = std::get<0>(minutae).x - 1; i <= std::get<0>(minutae).x + 1; i++)
         {
-            for (int j = minutae.first.y - 1; j <= minutae.first.y + 1; j++)
+            for (int j = std::get<0>(minutae).y - 1; j <= std::get<0>(minutae).y + 1; j++)
             {
                 uchar& color = mat.at<uchar>(i,j);
                 color = 0;
@@ -36,9 +42,9 @@ void printMinutaes(const std::vector<std::pair<Pixel, MinutiaeType>> &minutaes, 
     }
 }
 
-std::vector<std::pair<Pixel, MinutiaeType>> retrieveMinutiaes(const cv::Mat& mat)
+std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> retrieveMinutiaes(const cv::Mat& mat)
 {
-    std::vector<std::pair<Pixel, MinutiaeType>> minutiaes;
+    std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> minutiaes;
     for(int i = 1; i < mat.rows - 1; i++)
     {
         for(int j = 1; j < mat.cols - 1; j++)
@@ -80,17 +86,41 @@ std::vector<std::pair<Pixel, MinutiaeType>> retrieveMinutiaes(const cv::Mat& mat
 
                 const int halfCrossingNumber = crossingNumber / 2;
 
-                if (halfCrossingNumber == 1)
+                if (halfCrossingNumber != 2 && halfCrossingNumber > 0)
                 {
+                    MinutiaeDirection minutiaeDirection;
+                    if (mat.at<uchar>(i - 1, j - 1) != mat.at<uchar>(i + 1, j + 1))
+                    {
+                        minutiaeDirection = MinutiaeDirection::DiagonalDecreasing;
+                    }
+                    else if (mat.at<uchar>(i + 1, j - 1) != mat.at<uchar>(i - 1, j + 1))
+                    {
+                        minutiaeDirection = MinutiaeDirection::DiagonalIncreasing;
+                    }
+                    else if (mat.at<uchar>(i, j - 1) != mat.at<uchar>(i, j + 1))
+                    {
+                        minutiaeDirection = MinutiaeDirection::Horizontal;
+                    }
+                    else if (mat.at<uchar>(i + 1, j) != mat.at<uchar>(i - 1, j))
+                    {
+                        minutiaeDirection = MinutiaeDirection::Vertical;
+                    }
+                    else
+                    {
+                        throw std::runtime_error("coś jest nie tak");
+                    }
                     Pixel pixel(i, j);
-                    minutiaes.emplace_back(std::make_pair(pixel, MinutiaeType::End));
 
+                    if (halfCrossingNumber == 1)
+                    {
+                        minutiaes.emplace_back(std::make_tuple(pixel, MinutiaeType::End, minutiaeDirection));
+                    }
+                    else if (halfCrossingNumber >= 3)
+                    {
+                        minutiaes.emplace_back(std::make_tuple(pixel, MinutiaeType::Fork, minutiaeDirection));
+                    }
                 }
-                else if (halfCrossingNumber >= 3)
-                {
-                    Pixel pixel(i, j);
-                    minutiaes.emplace_back(std::make_pair(pixel, MinutiaeType::Fork));
-                }
+
             }
         }
     }
