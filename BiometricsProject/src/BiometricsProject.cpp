@@ -2,6 +2,7 @@
 #include "EasyBMP/EasyBMP.h"
 #include "opencv2/core/mat.hpp"
 #include <opencv2/opencv.hpp>
+#include <opencv2/ximgproc.hpp>
 
 int main()
 {
@@ -34,7 +35,17 @@ int main()
     cv::imshow("Display Image5", out);
     cv::waitKey(0);
 
-//    cv::ximgproc::thinning
+    cv::bitwise_not(out, img);
+    cv::imshow("Display Image6", img);
+    cv::waitKey(0);
+
+    cv::ximgproc::thinning(img, out, cv::ximgproc::ThinningTypes::THINNING_ZHANGSUEN);
+    cv::imshow("Display Image7", out);
+    cv::waitKey(0);
+
+    cv::bitwise_not(out, img);
+    cv::imshow("Display Image8", img);
+    cv::waitKey(0);
 
 //	cv::morphologyEx(img, out, cv::MORPH_OPEN, cv::getStructuringElement(1 ,cv::Size(3,3), cv::Point(1,1)));
 //	cv::imshow("Display Image5", out);
