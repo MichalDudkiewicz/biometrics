@@ -26,6 +26,56 @@ public:
     int x, y;
 };
 
+void validateMinutaes(std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> &minutaes, const cv::Mat& mat)
+{
+    std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> minutaesCopy;
+    for (const auto & minutae : minutaes)
+    {
+        int counter = 0;
+        for (int i = std::get<0>(minutae).y + 1; i < mat.cols; i++)
+        {
+            const auto& color = mat.at<uchar>(std::get<0>(minutae).x, i);
+            if (color == 0)
+            {
+                counter++;
+                break;
+            }
+        }
+        for (int i = std::get<0>(minutae).y - 1; i >= 0; i--)
+        {
+            const auto& color = mat.at<uchar>(std::get<0>(minutae).x, i);
+            if (color == 0)
+            {
+                counter++;
+                break;
+            }
+        }
+        for (int i = std::get<0>(minutae).x + 1; i < mat.rows; i++)
+        {
+            const auto& color = mat.at<uchar>(i, std::get<0>(minutae).y);
+            if (color == 0)
+            {
+                counter++;
+                break;
+            }
+        }
+        for (int i = std::get<0>(minutae).x - 1; i >= 0; i--)
+        {
+            const auto& color = mat.at<uchar>(i, std::get<0>(minutae).y);
+            if (color == 0)
+            {
+                counter++;
+                break;
+            }
+        }
+        if (counter > 2)
+        {
+            minutaesCopy.push_back(minutae);
+        }
+    }
+    minutaes = minutaesCopy;
+}
+
 void printMinutaes(const std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> &minutaes, cv::Mat& mat)
 {
     for (const auto& minutae : minutaes)
@@ -163,11 +213,19 @@ int main()
     cv::waitKey(0);
 
 
-    const auto minutiaes = retrieveMinutiaes(img);
+    auto minutiaes = retrieveMinutiaes(img);
 
+    cv::Mat imgCopy = img.clone();
     printMinutaes(minutiaes, img);
 
     cv::imshow("Display Image9", img);
+    cv::waitKey(0);
+
+    validateMinutaes(minutiaes, imgCopy);
+
+    printMinutaes(minutiaes, imgCopy);
+
+    cv::imshow("Display Image10", imgCopy);
     cv::waitKey(0);
 
 	return 0;
