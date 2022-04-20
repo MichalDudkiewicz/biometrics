@@ -177,48 +177,129 @@ std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> retrieveMinutiae
     return minutiaes;
 }
 
+double getOrientation(const std::vector<cv::Point>& pts)
+{
+    //Construct a buffer used by the pca analysis
+    int sz = static_cast<int>(pts.size());
+    cv::Mat data_pts = cv::Mat(sz, 2, CV_64F);
+    for (int i = 0; i < data_pts.rows; i++)
+    {
+        data_pts.at<double>(i, 0) = pts[i].x;
+        data_pts.at<double>(i, 1) = pts[i].y;
+    }
+    //Perform PCA analysis
+    cv::PCA pca_analysis(data_pts, cv::Mat(), cv::PCA::DATA_AS_ROW);
+    //Store the center of the object
+    cv::Point cntr = cv::Point(static_cast<int>(pca_analysis.mean.at<double>(0, 0)),
+        static_cast<int>(pca_analysis.mean.at<double>(0, 1)));
+    //Store the eigenvalues and eigenvectors
+    std::vector<cv::Point2d> eigen_vecs(2);
+    std::vector<double> eigen_val(2);
+    for (int i = 0; i < 2; i++)
+    {
+        eigen_vecs[i] = cv::Point2d(pca_analysis.eigenvectors.at<double>(i, 0),
+            pca_analysis.eigenvectors.at<double>(i, 1));
+        eigen_val[i] = pca_analysis.eigenvalues.at<double>(i);
+    }
+    double angle = atan2(eigen_vecs[0].y, eigen_vecs[0].x); // orientation in radians
+    angle = (angle * 180.f) / CV_PI;
+    std::cout << angle << std::endl;
+    return angle;
+}
+
 int main()
 {
 	std::string image_path = cv::samples::findFile("101_2.tif");
 	cv::Mat img = cv::imread(image_path, cv::IMREAD_GRAYSCALE);
 
 	cv::Mat out;
-	cv::namedWindow("Display Image1", cv::WINDOW_AUTOSIZE );
+    cv::Mat buffer;
+	//cv::namedWindow("Display Image1", cv::WINDOW_AUTOSIZE );
+    // 
+    //rows = y, cols = x
 
 	cv::imshow("Display Image2", img);
     cv::waitKey(0);
 
-    cv::medianBlur(img, out, 5);
-    cv::imshow("Display Image3", out);
+    buffer = img;
+
+    cv::equalizeHist(buffer, out);
+    cv::imshow("Display Image hist", out);
     cv::waitKey(0);
 
-	cv::adaptiveThreshold(out, img, 255, cv::AdaptiveThresholdTypes::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 17, 1);
-	cv::imshow("Display Image4", img);
+    buffer = out;
+
+    //buffer.convertTo(out, CV_32F);
+    //buffer = out;
+
+    cv::Mat Result;
+
+    cv::Mat kernel = cv::getGaborKernel(cv::Size(11, 11), 5, 0.0f, 9, 0.04, CV_PI / 4);
+    cv::filter2D(buffer, out, CV_32F, kernel);
+    Result = out;
+
+    // Convert image to binary
+    cv::Mat bw;
+    cv::threshold(img, bw, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+    // Find all the contours in the thresholded image
+    std::vector<std::vector<cv::Point> > contours;
+    cv::findContours(bw, contours, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
+
+    for (size_t i = 0; i < contours.size(); i++)
+    {
+        // Calculate the area of each contour
+        double area = contourArea(contours[i]);
+        // Ignore contours that are too small or too large
+        if (area < 1e2 || 1e5 < area) continue;
+        // Find the orientation of each shape
+        //getOrientation(contours[i]);
+        kernel = cv::getGaborKernel(cv::Size(11, 11), 5, getOrientation(contours[i]), 10, 0.04, 0);
+        cv::filter2D(buffer, out, CV_32F, kernel);
+        Result += out;
+    }
+
+    Result.convertTo(out, CV_8U, 1.0 / 255.0);
+    buffer = out;
+
+    cv::imshow("Display Image gabor", out);
+    cv::waitKey(0);
+
+    //cv::medianBlur(buffer, out, 5);
+    //cv::imshow("Display Image3", out);
+    //cv::waitKey(0);
+
+    //buffer = out;
+
+	cv::adaptiveThreshold(buffer, out, 255, cv::AdaptiveThresholdTypes::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 17, 1);
+	cv::imshow("Display Image4", out);
 	cv::waitKey(0);
 
-    cv::medianBlur(img, out, 5);
-    cv::imshow("Display Image5", out);
-    cv::waitKey(0);
+    buffer = out;
 
-    cv::bitwise_not(out, img);
-    cv::imshow("Display Image6", img);
-    cv::waitKey(0);
+    //cv::medianBlur(buffer, out, 3);
+    //cv::imshow("Display Image5", out);
+    //cv::waitKey(0);
 
-    cv::ximgproc::thinning(img, out, cv::ximgproc::ThinningTypes::THINNING_ZHANGSUEN);
+    //buffer = out;
+
+    cv::ximgproc::thinning(buffer, out, cv::ximgproc::ThinningTypes::THINNING_ZHANGSUEN);
     cv::imshow("Display Image7", out);
     cv::waitKey(0);
 
-    cv::bitwise_not(out, img);
-    cv::imshow("Display Image8", img);
-    cv::waitKey(0);
+    buffer = out;
 
+    //cv::bitwise_not(buffer, out);
+    //cv::imshow("Display Image8", out);
+    //cv::waitKey(0);
 
-    auto minutiaes = retrieveMinutiaes(img);
+    //buffer = out;
 
-    cv::Mat imgCopy = img.clone();
-    printMinutaes(minutiaes, img);
+    auto minutiaes = retrieveMinutiaes(buffer);
 
-    cv::imshow("Display Image9", img);
+    cv::Mat imgCopy = buffer.clone();
+    printMinutaes(minutiaes, buffer);
+
+    cv::imshow("Display Image9", buffer);
     cv::waitKey(0);
 
     validateMinutaes(minutiaes, imgCopy);
