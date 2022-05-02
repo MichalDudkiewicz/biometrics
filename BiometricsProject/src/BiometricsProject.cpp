@@ -207,6 +207,30 @@ double getOrientation(const std::vector<cv::Point>& pts)
     return angle;
 }
 
+cv::Mat gabor(cv::Mat& myImg){
+    // prepare the output matrix for filters
+    cv::Mat enhanced(myImg.rows, myImg.cols, CV_32F);
+
+    //predefine parameters for Gabor kernel
+    cv::Size kSize(31, 31);
+
+    double lambda = 8;
+    double sigma = 4;
+    double gamma = 0.6;
+    double psi =  0.1;
+
+    for (double theta = 0.0; theta <= 180.0; theta += 1.0)
+    {
+        cv::Mat kernel = cv::getGaborKernel(kSize, sigma, theta, lambda, gamma, psi);
+        cv::Mat gabor(myImg.rows, myImg.cols, CV_32F);
+        cv::filter2D(myImg, gabor, CV_32F, kernel);
+        cv::add(enhanced, gabor, enhanced);
+    }
+
+    return enhanced;
+}
+
+
 int main()
 {
 	std::string image_path = cv::samples::findFile("101_2.tif");
@@ -214,99 +238,36 @@ int main()
 
 	cv::Mat out;
     cv::Mat buffer;
-	//cv::namedWindow("Display Image1", cv::WINDOW_AUTOSIZE );
-    // 
-    //rows = y, cols = x
 
-	cv::imshow("Display Image2", img);
+	cv::imshow("Original", img);
     cv::waitKey(0);
 
     buffer = img;
 
-    cv::equalizeHist(buffer, out);
-    cv::imshow("Display Image hist", out);
+    out = gabor(buffer);
+    cv::imshow("Gabor", out);
     cv::waitKey(0);
+    out.convertTo(buffer, CV_8UC1);
 
-    buffer = out;
-
-    //buffer.convertTo(out, CV_32F);
-    //buffer = out;
-
-    cv::Mat Result;
-
-    cv::Mat kernel = cv::getGaborKernel(cv::Size(11, 11), 5, 0.0f, 9, 0.04, CV_PI / 4);
-    cv::filter2D(buffer, out, CV_32F, kernel);
-    Result = out;
-
-    // Convert image to binary
-    cv::Mat bw;
-    cv::threshold(img, bw, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
-    // Find all the contours in the thresholded image
-    std::vector<std::vector<cv::Point> > contours;
-    cv::findContours(bw, contours, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
-
-    for (size_t i = 0; i < contours.size(); i++)
-    {
-        // Calculate the area of each contour
-        double area = contourArea(contours[i]);
-        // Ignore contours that are too small or too large
-        if (area < 1e2 || 1e5 < area) continue;
-        // Find the orientation of each shape
-        //getOrientation(contours[i]);
-        kernel = cv::getGaborKernel(cv::Size(11, 11), 5, getOrientation(contours[i]), 10, 0.04, 0);
-        cv::filter2D(buffer, out, CV_32F, kernel);
-        Result += out;
-    }
-
-    Result.convertTo(out, CV_8U, 1.0 / 255.0);
-    buffer = out;
-
-    cv::imshow("Display Image gabor", out);
-    cv::waitKey(0);
-
-    //cv::medianBlur(buffer, out, 5);
-    //cv::imshow("Display Image3", out);
-    //cv::waitKey(0);
-
-    //buffer = out;
-
-	cv::adaptiveThreshold(buffer, out, 255, cv::AdaptiveThresholdTypes::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 17, 1);
-	cv::imshow("Display Image4", out);
-	cv::waitKey(0);
-
-    buffer = out;
-
-    //cv::medianBlur(buffer, out, 3);
-    //cv::imshow("Display Image5", out);
-    //cv::waitKey(0);
-
-    //buffer = out;
-
+    cv::bitwise_not(buffer, buffer);
     cv::ximgproc::thinning(buffer, out, cv::ximgproc::ThinningTypes::THINNING_ZHANGSUEN);
-    cv::imshow("Display Image7", out);
+    cv::bitwise_not(out, out);
+    cv::imshow("Thinned", out);
     cv::waitKey(0);
 
-    buffer = out;
+    auto minutiaes = retrieveMinutiaes(out);
 
-    //cv::bitwise_not(buffer, out);
-    //cv::imshow("Display Image8", out);
-    //cv::waitKey(0);
+    cv::Mat imgCopy = out.clone();
+    printMinutaes(minutiaes, out);
 
-    //buffer = out;
-
-    auto minutiaes = retrieveMinutiaes(buffer);
-
-    cv::Mat imgCopy = buffer.clone();
-    printMinutaes(minutiaes, buffer);
-
-    cv::imshow("Display Image9", buffer);
+    cv::imshow("Minutaes", out);
     cv::waitKey(0);
 
     validateMinutaes(minutiaes, imgCopy);
 
     printMinutaes(minutiaes, imgCopy);
 
-    cv::imshow("Display Image10", imgCopy);
+    cv::imshow("Minutaes after validation", imgCopy);
     cv::waitKey(0);
 
 	return 0;
