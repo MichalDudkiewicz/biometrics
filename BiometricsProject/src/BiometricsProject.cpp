@@ -316,6 +316,26 @@ cv::Mat gabor(cv::Mat& myImg, const std::vector<std::vector<std::optional<double
     return img;
 }
 
+void waitForSpace()
+{
+    while(true)
+    {
+        const auto k = cv::waitKey();
+        if (k==32) // space on linux (?)
+        {
+            break;
+        }
+        else if (k==-1)
+        {
+            continue;
+        }
+        else
+        {
+            std::cout << "key pressed: " << k << '\n';
+        }
+    }
+}
+
 /*
  * @see https://answers.opencv.org/question/165566/thumbprint-gabor-filtering-orientation-map-and-normalization/
  * @see https://answers.opencv.org/question/6364/fingerprint-matching-in-mobile-devices-android-platform/
@@ -331,7 +351,7 @@ int main()
     cv::Mat buffer;
 
 	cv::imshow("Original", img);
-    cv::waitKey(0);
+    waitForSpace();
 
     buffer = img;
 
@@ -343,14 +363,14 @@ int main()
     const auto clahe = cv::createCLAHE();
     clahe->apply(buffer, out);
     cv::imshow("Contrast stretching", out);
-    cv::waitKey(0);
+    waitForSpace();
     buffer = out;
 
     // https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html
     cv::GaussianBlur(buffer, out, cv::Size(3,3), 0);
 //    cv::medianBlur(buffer, out, 5);
     cv::imshow("Blur", out);
-    cv::waitKey(0);
+    waitForSpace();
     buffer = out;
 
     // orientation image
@@ -391,16 +411,16 @@ int main()
 
     out = gabor(buffer, orientationMatrix);
     cv::imshow("Gabor", out);
-    cv::waitKey(0);
+    waitForSpace();
     out.convertTo(buffer, CV_8UC1);
     cv::imshow("Conv", buffer);
-    cv::waitKey(0);
+    waitForSpace();
 
     const auto kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3,3));
     cv::morphologyEx(buffer, out, cv::MORPH_CLOSE, kernel);
     cv::threshold(out, buffer, 200, 255, cv::THRESH_BINARY);
     cv::imshow("Postprocess", buffer);
-    cv::waitKey(0);
+    waitForSpace();
 
     cv::Mat mask;
     const auto kernel2 = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(20,20));
@@ -408,36 +428,36 @@ int main()
     cv::morphologyEx(mask, out, cv::MORPH_ERODE, kernel2, cv::Point(-1, -1), 2);
     cv::bitwise_not(out, mask);
     cv::imshow("Mask", mask);
-    cv::waitKey(0);
+    waitForSpace();
 
     buffer = buffer - mask;
     cv::imshow("Masked", buffer);
-    cv::waitKey(0);
+    waitForSpace();
 
 //    cv::GaussianBlur(buffer, out, cv::Size(3,3), 0);
 //    cv::imshow("Blur", out);
-//    cv::waitKey(0);
+//    waitForSpace();
 //    buffer = out;
 
 //    const auto clahe = cv::createCLAHE(40.0, cv::Size(90, 90));
 //    clahe->apply(buffer, out);
 //    cv::imshow("Contrast stretching", out);
-//    cv::waitKey(0);
+//    waitForSpace();
 //    buffer = out;
 
 //    const auto ke = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
 //    cv::morphologyEx(buffer, out, cv::MORPH_OPEN, ke);
 //    cv::imshow("Blur", out);
-//    cv::waitKey(0);
+//    waitForSpace();
 //    buffer = out;
 
 //    cv::bitwise_not(buffer, buffer);
 //    cv::imshow("Thinned1", buffer);
-    cv::waitKey(0);
+    waitForSpace();
     cv::ximgproc::thinning(buffer, out, cv::ximgproc::ThinningTypes::THINNING_GUOHALL);
     cv::bitwise_not(out, out);
     cv::imshow("Thinned2", out);
-    cv::waitKey(0);
+    waitForSpace();
 
     auto minutiaes = retrieveMinutiaes(out);
 
@@ -445,14 +465,14 @@ int main()
     printMinutaes(minutiaes, out);
 
     cv::imshow("Minutaes", out);
-    cv::waitKey(0);
+    waitForSpace();
 
     validateMinutaes(minutiaes, imgCopy);
 
     printMinutaes(minutiaes, imgCopy);
 
     cv::imshow("Minutaes after validation", imgCopy);
-    cv::waitKey(0);
+    waitForSpace();
 
 	return 0;
 }
