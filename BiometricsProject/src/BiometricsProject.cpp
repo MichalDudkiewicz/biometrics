@@ -206,6 +206,12 @@ double StandardDeviation(std::vector<double> samples)
     return sqrt(Variance(samples));
 }
 
+/*
+ * @see https://pyimagesearch.com/2021/05/12/image-gradients-with-opencv-sobel-and-scharr/
+ * @see https://docs.opencv.org/3.4/d2/d2c/tutorial_sobel_derivatives.html
+ * @see https://www.sciencedirect.com/topics/engineering/sobel-edge-detection
+ * @see https://en.wikipedia.org/wiki/Sobel_operator
+ */
 cv::Mat gabor(cv::Mat& myImg, const std::vector<std::vector<std::optional<double>>>& orientationMatrix){
     // prepare the output matrix for filters
     cv::Mat img(myImg.rows, myImg.cols, CV_32F);
@@ -310,7 +316,12 @@ cv::Mat gabor(cv::Mat& myImg, const std::vector<std::vector<std::optional<double
     return img;
 }
 
-
+/*
+ * @see https://answers.opencv.org/question/165566/thumbprint-gabor-filtering-orientation-map-and-normalization/
+ * @see https://answers.opencv.org/question/6364/fingerprint-matching-in-mobile-devices-android-platform/
+ * @see https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.93.845&rep=rep1&type=pdf
+ * @see http://biometrics.cse.msu.edu/Publications/Fingerprint/MSU-CPS-97-35fenhance.pdf
+ */
 int main()
 {
 	std::string image_path = cv::samples::findFile("101_2.tif");
@@ -324,12 +335,18 @@ int main()
 
     buffer = img;
 
+    // sometimes also DFT is used when needed
+    // https://docs.opencv.org/4.x/d8/d01/tutorial_discrete_fourier_transform.html
+
+    // about CLAHE: https://docs.opencv.org/3.1.0/d5/daf/tutorial_py_histogram_equalization.html
+    // https://stackoverflow.com/questions/38504864/opencv-clahe-parameters-explanation
     const auto clahe = cv::createCLAHE();
     clahe->apply(buffer, out);
     cv::imshow("Contrast stretching", out);
     cv::waitKey(0);
     buffer = out;
 
+    // https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html
     cv::GaussianBlur(buffer, out, cv::Size(3,3), 0);
 //    cv::medianBlur(buffer, out, 5);
     cv::imshow("Blur", out);
