@@ -74,7 +74,7 @@ void validateMinutaes(std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirect
                 break;
             }
         }
-        if (counter > 2)
+        if (counter > 3)
         {
             minutaesCopy.push_back(minutae);
         }
@@ -396,6 +396,24 @@ int main()
     cv::imshow("Conv", buffer);
     cv::waitKey(0);
 
+    const auto kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3,3));
+    cv::morphologyEx(buffer, out, cv::MORPH_CLOSE, kernel);
+    cv::threshold(out, buffer, 200, 255, cv::THRESH_BINARY);
+    cv::imshow("Postprocess", buffer);
+    cv::waitKey(0);
+
+    cv::Mat mask;
+    const auto kernel2 = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(20,20));
+    cv::morphologyEx(buffer, mask, cv::MORPH_CLOSE, kernel2);
+    cv::morphologyEx(mask, out, cv::MORPH_ERODE, kernel2, cv::Point(-1, -1), 2);
+    cv::bitwise_not(out, mask);
+    cv::imshow("Mask", mask);
+    cv::waitKey(0);
+
+    buffer = buffer - mask;
+    cv::imshow("Masked", buffer);
+    cv::waitKey(0);
+
 //    cv::GaussianBlur(buffer, out, cv::Size(3,3), 0);
 //    cv::imshow("Blur", out);
 //    cv::waitKey(0);
@@ -416,7 +434,7 @@ int main()
 //    cv::bitwise_not(buffer, buffer);
 //    cv::imshow("Thinned1", buffer);
     cv::waitKey(0);
-    cv::ximgproc::thinning(buffer, out, cv::ximgproc::ThinningTypes::THINNING_ZHANGSUEN);
+    cv::ximgproc::thinning(buffer, out, cv::ximgproc::ThinningTypes::THINNING_GUOHALL);
     cv::bitwise_not(out, out);
     cv::imshow("Thinned2", out);
     cv::waitKey(0);
