@@ -98,6 +98,49 @@ void printMinutaes(const std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDir
     }
 }
 
+cv::Mat getMinutaes(const std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> &minutaes, const cv::Mat& mat)
+{
+    cv::Mat minutaesMat = mat;
+    minutaesMat = cv::Scalar(255);
+    for (const auto& minutae : minutaes)
+    {
+        const auto dir = std::get<2>(minutae);
+        const int i = std::get<0>(minutae).x;
+        const int j = std::get<0>(minutae).y;
+        uchar& color = minutaesMat.at<uchar>(i,j);
+        uchar& color1 = minutaesMat.at<uchar>(i-1,j);
+        uchar& color2 = minutaesMat.at<uchar>(i+1,j);
+        uchar& color3 = minutaesMat.at<uchar>(i,j-1);
+        uchar& color4 = minutaesMat.at<uchar>(i,j+1);
+        uchar& color5 = minutaesMat.at<uchar>(i-1,j-1);
+        uchar& color6 = minutaesMat.at<uchar>(i+1,j+1);
+        uchar& color7 = minutaesMat.at<uchar>(i+1,j-1);
+        uchar& color8 = minutaesMat.at<uchar>(i-1,j+1);
+        color = 0;
+        switch (dir) {
+            case MinutiaeDirection::Horizontal:
+                color3 = 0;
+                color4 = 0;
+                break;
+            case MinutiaeDirection::Vertical:
+                color1 = 0;
+                color2 = 0;
+                break;
+            case MinutiaeDirection::DiagonalDecreasing:
+                color5 = 0;
+                color6 = 0;
+                break;
+            case MinutiaeDirection::DiagonalIncreasing:
+                color7 = 0;
+                color8 = 0;
+                break;
+            default:
+                throw std::runtime_error("unsupported minutae dir");
+        }
+    }
+    return minutaesMat;
+}
+
 std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> retrieveMinutiaes(const cv::Mat& mat)
 {
     std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> minutiaes;
@@ -222,9 +265,9 @@ cv::Mat gabor(cv::Mat& myImg, const std::vector<std::vector<std::optional<double
     cv::Size kSize(k, k);
     const int sobelInK = k / kSobelSize;
 
-    double lambda = 10;
+    double lambda = 8;
     double sigma = 4;
-    double gamma = 1;
+    double gamma = 10;
 
     std::optional<double> previousTheta;
 
@@ -249,29 +292,29 @@ cv::Mat gabor(cv::Mat& myImg, const std::vector<std::vector<std::optional<double
 
             if (dirs.size() > 0)
             {
-                const auto stdDev = StandardDeviation(dirs);
-                if (stdDev >1.5)
-                {
-                    const int s = 3;
-                    for (int i = r; i < orientationMatrix.size() && i < r + sobelInK; i++)
-                    {
-                        for (int j = c; j < orientationMatrix[r].size() && j < c + sobelInK; j++)
-                        {
-                            const auto dir = orientationMatrix[i][j];
-                            if (dir.has_value())
-                            {
-                                double theta = dir.value();
-                                cv::Mat kernel = cv::getGaborKernel(cv::Size(s, s), sigma, theta, lambda, gamma);
-                                cv::Mat gabor(s, s, CV_32F);
-                                cv::filter2D(myImg(cv::Range(i * kSobelSize,i * kSobelSize + s), cv::Range(j * kSobelSize, j * kSobelSize + s)), gabor, CV_32F, kernel);
-                                cv::Mat aux = img.rowRange(i * kSobelSize,i * kSobelSize + s).colRange(j * kSobelSize, j * kSobelSize + s);
-                                gabor.copyTo(aux);
-                            }
-                        }
-                    }
-                }
-                else
-                {
+//                const auto stdDev = StandardDeviation(dirs);
+//                if (stdDev >1.5)
+//                {
+//                    const int s = 3;
+//                    for (int i = r; i < orientationMatrix.size() && i < r + sobelInK; i++)
+//                    {
+//                        for (int j = c; j < orientationMatrix[r].size() && j < c + sobelInK; j++)
+//                        {
+//                            const auto dir = orientationMatrix[i][j];
+//                            if (dir.has_value())
+//                            {
+//                                double theta = dir.value();
+//                                cv::Mat kernel = cv::getGaborKernel(cv::Size(s, s), sigma, theta, lambda, gamma);
+//                                cv::Mat gabor(s, s, CV_32F);
+//                                cv::filter2D(myImg(cv::Range(i * kSobelSize,i * kSobelSize + s), cv::Range(j * kSobelSize, j * kSobelSize + s)), gabor, CV_32F, kernel);
+//                                cv::Mat aux = img.rowRange(i * kSobelSize,i * kSobelSize + s).colRange(j * kSobelSize, j * kSobelSize + s);
+//                                gabor.copyTo(aux);
+//                            }
+//                        }
+//                    }
+//                }
+//                else
+//                {
                     const double theta = sum / dirs.size();
                     cv::Mat kernel = cv::getGaborKernel(kSize, sigma, theta, lambda, gamma);
                     cv::Mat gabor(k, k, CV_32F);
@@ -308,7 +351,7 @@ cv::Mat gabor(cv::Mat& myImg, const std::vector<std::vector<std::optional<double
 
                     }
                     previousTheta = theta;
-                }
+//                }
             }
         }
     }
@@ -342,16 +385,19 @@ void waitForSpace()
  * @see https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.93.845&rep=rep1&type=pdf
  * @see http://biometrics.cse.msu.edu/Publications/Fingerprint/MSU-CPS-97-35fenhance.pdf
  */
-int main()
+cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bool showPics = false)
 {
-	std::string image_path = cv::samples::findFile("101_2.tif");
-	cv::Mat img = cv::imread(image_path, cv::IMREAD_GRAYSCALE);
+    std::string image_path = cv::samples::findFile(fingerprintImageLocalPath);
+    cv::Mat img = cv::imread(image_path, cv::IMREAD_GRAYSCALE);
 
-	cv::Mat out;
+    cv::Mat out;
     cv::Mat buffer;
 
-	cv::imshow("Original", img);
-    waitForSpace();
+    cv::imshow("Original", img);
+    if (showPics)
+    {
+        waitForSpace();
+    }
 
     buffer = img;
 
@@ -363,14 +409,20 @@ int main()
     const auto clahe = cv::createCLAHE();
     clahe->apply(buffer, out);
     cv::imshow("Contrast stretching", out);
-    waitForSpace();
+    if (showPics)
+    {
+        waitForSpace();
+    }
     buffer = out;
 
     // https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html
     cv::GaussianBlur(buffer, out, cv::Size(3,3), 0);
 //    cv::medianBlur(buffer, out, 5);
     cv::imshow("Blur", out);
-    waitForSpace();
+    if (showPics)
+    {
+        waitForSpace();
+    }
     buffer = out;
 
     // orientation image
@@ -411,68 +463,117 @@ int main()
 
     out = gabor(buffer, orientationMatrix);
     cv::imshow("Gabor", out);
-    waitForSpace();
-    out.convertTo(buffer, CV_8UC1);
-    cv::imshow("Conv", buffer);
-    waitForSpace();
-
-    const auto kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3,3));
-    cv::morphologyEx(buffer, out, cv::MORPH_CLOSE, kernel);
-    cv::threshold(out, buffer, 200, 255, cv::THRESH_BINARY);
-    cv::imshow("Postprocess", buffer);
-    waitForSpace();
+    if (showPics)
+    {
+        waitForSpace();
+    }
+    buffer = out;
 
     cv::Mat mask;
-    const auto kernel2 = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(20,20));
-    cv::morphologyEx(buffer, mask, cv::MORPH_CLOSE, kernel2);
-    cv::morphologyEx(mask, out, cv::MORPH_ERODE, kernel2, cv::Point(-1, -1), 2);
-    cv::bitwise_not(out, mask);
-    cv::imshow("Mask", mask);
-    waitForSpace();
+    const auto kernel2 = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(30,30));
+    cv::Mat bufferMask;
+    cv::morphologyEx(out, mask, cv::MORPH_CLOSE, kernel2, cv::Point(-1, -1), 2);
 
-    buffer = buffer - mask;
-    cv::imshow("Masked", buffer);
-    waitForSpace();
+    cv::morphologyEx(mask, bufferMask, cv::MORPH_ERODE, kernel2);
+    cv::threshold(mask, bufferMask, 200, 255, cv::THRESH_BINARY);
+    mask = bufferMask;
+    mask.convertTo(mask, CV_8UC1);
+    cv::bitwise_not(mask, mask);
 
-//    cv::GaussianBlur(buffer, out, cv::Size(3,3), 0);
-//    cv::imshow("Blur", out);
-//    waitForSpace();
-//    buffer = out;
 
-//    const auto clahe = cv::createCLAHE(40.0, cv::Size(90, 90));
-//    clahe->apply(buffer, out);
-//    cv::imshow("Contrast stretching", out);
-//    waitForSpace();
-//    buffer = out;
+    cv::GaussianBlur(buffer, out, cv::Size(5,5), 0);
+    cv::imshow("Blur After", out);
+    if (showPics)
+    {
+        waitForSpace();
+    }
+    buffer = out;
 
-//    const auto ke = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
-//    cv::morphologyEx(buffer, out, cv::MORPH_OPEN, ke);
-//    cv::imshow("Blur", out);
-//    waitForSpace();
-//    buffer = out;
+    buffer.convertTo(buffer, CV_8UC1);
+    cv::imshow("Conv", buffer);
+    if (showPics)
+    {
+        waitForSpace();
+    }
 
-//    cv::bitwise_not(buffer, buffer);
-//    cv::imshow("Thinned1", buffer);
-    waitForSpace();
-    cv::ximgproc::thinning(buffer, out, cv::ximgproc::ThinningTypes::THINNING_GUOHALL);
+    cv::adaptiveThreshold(buffer, out, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 9, 2);
+    buffer = out;
+    cv::imshow("Threshold2", buffer);
+    if (showPics)
+    {
+        waitForSpace();
+    }
+
+    cv::ximgproc::thinning(buffer, out, cv::ximgproc::ThinningTypes::THINNING_ZHANGSUEN);
     cv::bitwise_not(out, out);
     cv::imshow("Thinned2", out);
-    waitForSpace();
+    if (showPics)
+    {
+        waitForSpace();
+    }
+
+    buffer = out + mask;
+    cv::imshow("Masked2", buffer);
+    if (showPics)
+    {
+        waitForSpace();
+    }
+    out = buffer;
 
     auto minutiaes = retrieveMinutiaes(out);
 
-    cv::Mat imgCopy = out.clone();
+    cv::Mat imgCopy;
+    out.copyTo(imgCopy);
     printMinutaes(minutiaes, out);
 
     cv::imshow("Minutaes", out);
-    waitForSpace();
+    if (showPics)
+    {
+        waitForSpace();
+    }
 
     validateMinutaes(minutiaes, imgCopy);
 
     printMinutaes(minutiaes, imgCopy);
 
     cv::imshow("Minutaes after validation", imgCopy);
-    waitForSpace();
+    if (showPics)
+    {
+        waitForSpace();
+    }
+
+    auto minutaeTemplate = getMinutaes(minutiaes, imgCopy);
+    cv::imshow("Minutaes template", minutaeTemplate);
+    if (showPics)
+    {
+        waitForSpace();
+    }
+
+    return minutaeTemplate;
+}
+
+int main()
+{
+    const bool showPics = true;
+    const auto patternMinutaes = minutaesFromFingerprint("101_2.tif", showPics);
+    const auto minutaesToCheck = minutaesFromFingerprint("102_4.tif", showPics);
+
+    // @see https://github.com/opencv/opencv/blob/05b15943d6a42c99e5f921b7dbaa8323f3c042c6/samples/gpu/generalized_hough.cpp
+    // @see http://amroamroamro.github.io/mexopencv/opencv/generalized_hough_demo.html
+    auto hough = cv::createGeneralizedHoughGuil();
+    hough->setTemplate(patternMinutaes, cv::Point(patternMinutaes.rows/2, patternMinutaes.cols/2));
+    cv::Mat out;
+    minutaesToCheck.convertTo(out, CV_8UC1);
+    std::vector<cv::Vec4f> position;
+    hough->detect(out, position);
+    if (position.size() == 1)
+    {
+        std::cout << "Matched!" << '\n';
+    }
+    else
+    {
+        std::cout << "Not matched!" << '\n';
+    }
 
 	return 0;
 }
