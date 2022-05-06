@@ -641,11 +641,29 @@ int toDegrees(MinutiaeDirection dir)
     }
 }
 
-int main()
-{
+
+/*
+ * Program do weryfikacji odcisku palca
+ *
+ * Obowiązkowe parametry:
+ * pierwszy - lokalna ścieżka do zdjęcia z wzorcowym odciskiem palca
+ * drugi - lokalna ścieżka do zdjęcia z weryfikowanym odciskiem palca
+ *
+ * Przykładowe wywołanie: BiometricsProject "102_1.tif" "101_1.tif"
+ *
+ */
+int main(int argc, char **argv) {
+    if (argc < 3)
+    {
+        throw std::runtime_error("pass 2 arguments: pattern fingerprint image (first param) and fingerprint image to verify (second param)");
+    }
+
+    std::string fingerprintToVerify = argv[2];
+    std::string patternFingerprint = argv[1];
+
     const bool showPics = false;
-    const auto patternMinutaes = minutaesFromFingerprint("101_1.tif", showPics);
-    const auto minutaesToCheck = minutaesFromFingerprint("102_1.tif", showPics);
+    const auto patternMinutaes = minutaesFromFingerprint(patternFingerprint, showPics);
+    const auto minutaesToCheck = minutaesFromFingerprint(fingerprintToVerify, showPics);
 
     // @see https://github.com/opencv/opencv/blob/05b15943d6a42c99e5f921b7dbaa8323f3c042c6/samples/gpu/generalized_hough.cpp
     // @see http://amroamroamro.github.io/mexopencv/opencv/generalized_hough_demo.html
