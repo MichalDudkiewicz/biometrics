@@ -9,6 +9,11 @@
 namespace
 {
     constexpr int kSobelSize = 3;
+    constexpr int K = 100;
+    constexpr int L = 4;
+    constexpr int M = 400;
+    constexpr int N = 600;
+    int A[K][L][M][N];
 }
 
 enum MinutiaeType
@@ -53,7 +58,7 @@ void validateMinutaes(std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirect
         {
             const auto otherPosition = std::get<0>(other);
             const int distance = std::sqrt(pow(position.x - otherPosition.x, 2) + pow(position.y - otherPosition.y, 2));
-            constexpr int threshold = 5;
+            constexpr int threshold = 4;
             if (otherPosition != position && distance < threshold)
             {
                 tooClose = true;
@@ -320,29 +325,47 @@ cv::Mat gabor(cv::Mat& myImg, const std::vector<std::vector<std::optional<double
 
             if (dirs.size() > 0)
             {
-//                const auto stdDev = StandardDeviation(dirs);
-//                if (stdDev >1.5)
-//                {
-//                    const int s = 3;
-//                    for (int i = r; i < orientationMatrix.size() && i < r + sobelInK; i++)
-//                    {
-//                        for (int j = c; j < orientationMatrix[r].size() && j < c + sobelInK; j++)
-//                        {
-//                            const auto dir = orientationMatrix[i][j];
-//                            if (dir.has_value())
-//                            {
-//                                double theta = dir.value();
-//                                cv::Mat kernel = cv::getGaborKernel(cv::Size(s, s), sigma, theta, lambda, gamma);
-//                                cv::Mat gabor(s, s, CV_32F);
-//                                cv::filter2D(myImg(cv::Range(i * kSobelSize,i * kSobelSize + s), cv::Range(j * kSobelSize, j * kSobelSize + s)), gabor, CV_32F, kernel);
-//                                cv::Mat aux = img.rowRange(i * kSobelSize,i * kSobelSize + s).colRange(j * kSobelSize, j * kSobelSize + s);
-//                                gabor.copyTo(aux);
-//                            }
-//                        }
-//                    }
-//                }
-//                else
-//                {
+                const auto stdDev = StandardDeviation(dirs);
+                if (stdDev >0.8)
+                {
+                    const int s = 15;
+                    const int newSobelInK = s/kSobelSize;
+
+                    for (int m = 0; m < k/s; m++) {
+                        for (int n = 0; n < k/s; n++) {
+
+                            double sum2 = 0.0;
+                            std::vector<double> dirs2;
+
+                            int newR = r + newSobelInK * n;
+                            int newC = c + m * newSobelInK;
+
+                            for (int i = newR; i < orientationMatrix.size() && i < newR + newSobelInK; i++) {
+                                for (int j = newC; j < orientationMatrix[newC].size() && j < newC + newSobelInK; j++) {
+                                    const auto dir = orientationMatrix[i][j];
+                                    if (dir.has_value()) {
+                                        sum2 += dir.value();
+                                        dirs2.push_back(dir.value());
+                                    }
+                                }
+                            }
+
+                            if (dirs2.size() > 0)
+                            {
+                                const double theta = sum2 / dirs2.size();
+                                cv::Mat kernel = cv::getGaborKernel(cv::Size(s, s), sigma, theta, 2 * lambda, gamma);
+                                cv::Mat gabor(s, s, CV_32F);
+                                cv::filter2D(myImg(cv::Range(newR * kSobelSize,newR * kSobelSize + s), cv::Range(newC * kSobelSize, newC * kSobelSize + s)), gabor, CV_32F, kernel);
+                                cv::Mat aux = img.rowRange(newR * kSobelSize,newR * kSobelSize + s).colRange(newC * kSobelSize, newC * kSobelSize + s);
+                                gabor.copyTo(aux);
+
+                                previousTheta = std::nullopt;
+                            }
+                        }
+                    }
+                }
+                else
+                {
                     const double theta = sum / dirs.size();
                     cv::Mat kernel = cv::getGaborKernel(kSize, sigma, theta, lambda, gamma);
                     cv::Mat gabor(k, k, CV_32F);
@@ -379,7 +402,7 @@ cv::Mat gabor(cv::Mat& myImg, const std::vector<std::vector<std::optional<double
 
                     }
                     previousTheta = theta;
-//                }
+                }
             }
         }
     }
@@ -413,7 +436,7 @@ void waitForSpace()
  * @see https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.93.845&rep=rep1&type=pdf
  * @see http://biometrics.cse.msu.edu/Publications/Fingerprint/MSU-CPS-97-35fenhance.pdf
  */
-cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bool showPics = false)
+std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bool showPics = false)
 {
     std::string image_path = cv::samples::findFile(fingerprintImageLocalPath);
     cv::Mat img = cv::imread(image_path, cv::IMREAD_GRAYSCALE);
@@ -490,6 +513,22 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
     }
 
 
+    cv::Mat mask;
+    const auto kernel2 = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3,3));
+    cv::Mat bufferMask;
+    cv::morphologyEx(buffer, mask, cv::MORPH_OPEN, kernel2, cv::Point(-1, -1),5);
+    cv::morphologyEx(mask, bufferMask, cv::MORPH_DILATE, kernel2, cv::Point(-1, -1),10);
+    cv::threshold(bufferMask, mask, 200, 255, cv::THRESH_BINARY);
+    mask.convertTo(mask, CV_8UC1);
+//    cv::bitwise_not(mask, mask);
+    buffer = buffer + mask;
+
+    if (showPics)
+    {
+        cv::imshow("Masked before gabor " + fingerprintImageLocalPath, buffer);
+        waitForSpace();
+    }
+
     out = gabor(buffer, orientationMatrix);
     if (showPics)
     {
@@ -498,16 +537,16 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
     }
     buffer = out;
 
-    cv::Mat mask;
-    const auto kernel2 = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(30,30));
-    cv::Mat bufferMask;
-    cv::morphologyEx(out, mask, cv::MORPH_CLOSE, kernel2, cv::Point(-1, -1), 2);
-
-    cv::morphologyEx(mask, bufferMask, cv::MORPH_ERODE, kernel2);
-    cv::threshold(mask, bufferMask, 200, 255, cv::THRESH_BINARY);
-    mask = bufferMask;
-    mask.convertTo(mask, CV_8UC1);
-    cv::bitwise_not(mask, mask);
+//    cv::Mat mask;
+//    const auto kernel2 = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(30,30));
+//    cv::Mat bufferMask;
+//    cv::morphologyEx(out, mask, cv::MORPH_CLOSE, kernel2, cv::Point(-1, -1), 2);
+//
+//    cv::morphologyEx(mask, bufferMask, cv::MORPH_ERODE, kernel2);
+//    cv::threshold(mask, bufferMask, 200, 255, cv::THRESH_BINARY);
+//    mask = bufferMask;
+//    mask.convertTo(mask, CV_8UC1);
+//    cv::bitwise_not(mask, mask);
 
 
     cv::GaussianBlur(buffer, out, cv::Size(5,5), 0);
@@ -578,32 +617,91 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
         waitForSpace();
     }
 
-    return minutaeTemplate;
+    return minutiaes;
+}
+
+//int hough()
+//{
+//    return score
+//}
+
+int toDegrees(MinutiaeDirection dir)
+{
+    switch (dir) {
+        case MinutiaeDirection::Vertical:
+            return 90;
+        case MinutiaeDirection::Horizontal:
+            return 0;
+        case MinutiaeDirection::DiagonalIncreasing:
+            return 45;
+        case MinutiaeDirection::DiagonalDecreasing:
+            return 135;
+        default:
+            throw std::runtime_error("unsupported dir");
+    }
 }
 
 int main()
 {
-    const bool showPics = true;
+    const bool showPics = false;
     const auto patternMinutaes = minutaesFromFingerprint("101_1.tif", showPics);
-    const auto minutaesToCheck = minutaesFromFingerprint("101_5.tif", showPics);
+    const auto minutaesToCheck = minutaesFromFingerprint("102_1.tif", showPics);
 
     // @see https://github.com/opencv/opencv/blob/05b15943d6a42c99e5f921b7dbaa8323f3c042c6/samples/gpu/generalized_hough.cpp
     // @see http://amroamroamro.github.io/mexopencv/opencv/generalized_hough_demo.html
     // @see https://www.researchgate.net/profile/Fayyaz-Ul-Amir-Afsar-Minhas/publication/320076836_FINGERPRINT_BASED_PERSON_IDENTIFICATION_AND_VERIFICATION/links/59ccae0b45851556e9878a4a/FINGERPRINT-BASED-PERSON-IDENTIFICATION-AND-VERIFICATION.pdf?origin=publication_detail
-    auto hough = cv::createGeneralizedHoughGuil();
-    hough->setTemplate(patternMinutaes, cv::Point(patternMinutaes.rows/2, patternMinutaes.cols/2));
-    cv::Mat out;
-    minutaesToCheck.convertTo(out, CV_8UC1);
-    std::vector<cv::Vec4f> position;
-    hough->detect(out, position);
-    if (position.size() == 1)
+
+    std::array<int, 4> possibleThetas{0, 45, 90, 135};
+    std::vector<float> possibleScales;
+    possibleScales.reserve(K);
+    float scale = 0.5;
+    for (int k=0; k<K; k++)
     {
-        std::cout << "Matched!" << '\n';
+        possibleScales.push_back(scale);
+        scale += 0.01;
+    }
+
+    int maxVotes = 0;
+    for (const auto& p : patternMinutaes)
+    {
+        const auto pPos = std::get<0>(p);
+        const auto alpha = toDegrees(std::get<2>(p));
+        for (const auto& q : minutaesToCheck)
+        {
+            const auto beta = toDegrees(std::get<2>(q));
+            const auto qPos = std::get<0>(q);
+            for(int l = 0; l < possibleThetas.size(); l++)
+            {
+                const auto theta = possibleThetas[l];
+                if (alpha + theta == beta)
+                {
+                    for (int k = 0; k < possibleScales.size(); k++)
+                    {
+                        const float s = possibleScales[k];
+                        const int deltaX = qPos.x - s * (cos(theta) * pPos.x + sin(theta) * pPos.y);
+                        const int deltaY = qPos.y - s * (-sin(theta) * pPos.x + cos(theta) * pPos.y);
+                        const int m = deltaX;
+                        const int n = deltaY;
+                        if (n >= 0 && n < N && m >= 0 && m < M)
+                        {
+                            A[k][l][m][n] += 1;
+                            if (A[k][l][m][n] > maxVotes)
+                            {
+                                maxVotes = A[k][l][m][n];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if ((float)maxVotes / (float)minutaesToCheck.size() >= 0.04f) {
+        std::cout << "Matched!\n";
     }
     else
     {
-        std::cout << "Not matched!" << '\n';
+        std::cout << "Not matched!\n";
     }
-
 	return 0;
 }
