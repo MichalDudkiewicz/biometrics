@@ -649,7 +649,10 @@ int toDegrees(MinutiaeDirection dir)
  * pierwszy - lokalna ścieżka do zdjęcia z wzorcowym odciskiem palca
  * drugi - lokalna ścieżka do zdjęcia z weryfikowanym odciskiem palca
  *
- * Przykładowe wywołanie: BiometricsProject "102_1.tif" "101_1.tif"
+ * Opcjonalne parametry:
+ * ostatni - 0/1 określa czy pokazywać na ekranie zdjęcia etapów obróbki odcisku palca (true/false)
+ *
+ * Przykładowe wywołanie: BiometricsProject "102_1.tif" "101_1.tif" 0
  *
  */
 int main(int argc, char **argv) {
@@ -661,7 +664,15 @@ int main(int argc, char **argv) {
     std::string fingerprintToVerify = argv[2];
     std::string patternFingerprint = argv[1];
 
-    const bool showPics = false;
+    bool showPics = false;
+    if (argc > 3)
+    {
+        std::string ifShowPics = argv[3];
+        if (ifShowPics == "1")
+        {
+            showPics = true;
+        }
+    }
     const auto patternMinutaes = minutaesFromFingerprint(patternFingerprint, showPics);
     const auto minutaesToCheck = minutaesFromFingerprint(fingerprintToVerify, showPics);
 
