@@ -58,7 +58,7 @@ void validateMinutaes(std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirect
         {
             const auto otherPosition = std::get<0>(other);
             const int distance = std::sqrt(pow(position.x - otherPosition.x, 2) + pow(position.y - otherPosition.y, 2));
-            constexpr int threshold = 4;
+            constexpr int threshold = 5;
             if (otherPosition != position && distance < threshold)
             {
                 tooClose = true;
