@@ -696,7 +696,7 @@ int main()
         }
     }
 
-    if ((float)maxVotes / (float)minutaesToCheck.size() >= 0.04f) {
+    if ((float)maxVotes / (float)minutaesToCheck.size() >= 0.04f && maxVotes > 2) {
         std::cout << "Matched!\n";
     }
     else
