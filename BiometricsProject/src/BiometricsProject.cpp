@@ -32,11 +32,39 @@ public:
     int x, y;
 };
 
+bool operator==(const Pixel& pix1, const Pixel& pix2)
+{
+    return pix1.x == pix2.x && pix1.y==pix2.y;
+}
+
+bool operator!=(const Pixel& pix1, const Pixel& pix2)
+{
+    return !(pix1 == pix2);
+}
+
 void validateMinutaes(std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> &minutaes, const cv::Mat& mat)
 {
     std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> minutaesCopy;
     for (const auto & minutae : minutaes)
     {
+        bool tooClose = false;
+        const auto position = std::get<0>(minutae);
+        for (const auto& other : minutaes)
+        {
+            const auto otherPosition = std::get<0>(other);
+            const int distance = std::sqrt(pow(position.x - otherPosition.x, 2) + pow(position.y - otherPosition.y, 2));
+            constexpr int threshold = 5;
+            if (otherPosition != position && distance < threshold)
+            {
+                tooClose = true;
+                break;
+            }
+        }
+        if (tooClose)
+        {
+            continue;
+        }
+
         int counter = 0;
         for (int i = std::get<0>(minutae).y + 1; i < mat.cols; i++)
         {
@@ -395,7 +423,7 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
 
     if (showPics)
     {
-        cv::imshow("Original", img);
+        cv::imshow("Original " + fingerprintImageLocalPath, img);
         waitForSpace();
     }
 
@@ -411,7 +439,7 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
 
     if (showPics)
     {
-        cv::imshow("Contrast stretching", out);
+        cv::imshow("Contrast stretching " + fingerprintImageLocalPath, out);
         waitForSpace();
     }
     buffer = out;
@@ -421,7 +449,7 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
 //    cv::medianBlur(buffer, out, 5);
     if (showPics)
     {
-        cv::imshow("Blur", out);
+        cv::imshow("Blur " + fingerprintImageLocalPath, out);
         waitForSpace();
     }
     buffer = out;
@@ -465,7 +493,7 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
     out = gabor(buffer, orientationMatrix);
     if (showPics)
     {
-        cv::imshow("Gabor", out);
+        cv::imshow("Gabor " + fingerprintImageLocalPath, out);
         waitForSpace();
     }
     buffer = out;
@@ -485,7 +513,7 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
     cv::GaussianBlur(buffer, out, cv::Size(5,5), 0);
     if (showPics)
     {
-        cv::imshow("Blur After", out);
+        cv::imshow("Blur After " + fingerprintImageLocalPath, out);
         waitForSpace();
     }
     buffer = out;
@@ -493,7 +521,7 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
     buffer.convertTo(buffer, CV_8UC1);
     if (showPics)
     {
-        cv::imshow("Conv", buffer);
+        cv::imshow("Conv " + fingerprintImageLocalPath, buffer);
         waitForSpace();
     }
 
@@ -501,7 +529,7 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
     buffer = out;
     if (showPics)
     {
-        cv::imshow("Threshold2", buffer);
+        cv::imshow("Threshold2 " + fingerprintImageLocalPath, buffer);
         waitForSpace();
     }
 
@@ -509,14 +537,14 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
     cv::bitwise_not(out, out);
     if (showPics)
     {
-        cv::imshow("Thinned2", out);
+        cv::imshow("Thinned2 " + fingerprintImageLocalPath, out);
         waitForSpace();
     }
 
     buffer = out + mask;
     if (showPics)
     {
-        cv::imshow("Masked2", buffer);
+        cv::imshow("Masked2 " + fingerprintImageLocalPath, buffer);
         waitForSpace();
     }
     out = buffer;
@@ -529,7 +557,7 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
 
     if (showPics)
     {
-        cv::imshow("Minutaes", out);
+        cv::imshow("Minutaes " + fingerprintImageLocalPath, out);
         waitForSpace();
     }
 
@@ -539,14 +567,14 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
 
     if (showPics)
     {
-        cv::imshow("Minutaes after validation", imgCopy);
+        cv::imshow("Minutaes after validation " + fingerprintImageLocalPath, imgCopy);
         waitForSpace();
     }
 
     auto minutaeTemplate = getMinutaes(minutiaes, imgCopy);
     if (showPics)
     {
-        cv::imshow("Minutaes template", minutaeTemplate);
+        cv::imshow("Minutaes template " + fingerprintImageLocalPath, minutaeTemplate);
         waitForSpace();
     }
 
@@ -556,11 +584,12 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
 int main()
 {
     const bool showPics = true;
-    const auto patternMinutaes = minutaesFromFingerprint("101_2.tif", showPics);
-    const auto minutaesToCheck = minutaesFromFingerprint("102_4.tif", showPics);
+    const auto patternMinutaes = minutaesFromFingerprint("101_1.tif", showPics);
+    const auto minutaesToCheck = minutaesFromFingerprint("101_5.tif", showPics);
 
     // @see https://github.com/opencv/opencv/blob/05b15943d6a42c99e5f921b7dbaa8323f3c042c6/samples/gpu/generalized_hough.cpp
     // @see http://amroamroamro.github.io/mexopencv/opencv/generalized_hough_demo.html
+    // @see https://www.researchgate.net/profile/Fayyaz-Ul-Amir-Afsar-Minhas/publication/320076836_FINGERPRINT_BASED_PERSON_IDENTIFICATION_AND_VERIFICATION/links/59ccae0b45851556e9878a4a/FINGERPRINT-BASED-PERSON-IDENTIFICATION-AND-VERIFICATION.pdf?origin=publication_detail
     auto hough = cv::createGeneralizedHoughGuil();
     hough->setTemplate(patternMinutaes, cv::Point(patternMinutaes.rows/2, patternMinutaes.cols/2));
     cv::Mat out;
