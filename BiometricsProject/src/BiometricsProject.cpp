@@ -393,9 +393,9 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
     cv::Mat out;
     cv::Mat buffer;
 
-    cv::imshow("Original", img);
     if (showPics)
     {
+        cv::imshow("Original", img);
         waitForSpace();
     }
 
@@ -408,9 +408,10 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
     // https://stackoverflow.com/questions/38504864/opencv-clahe-parameters-explanation
     const auto clahe = cv::createCLAHE();
     clahe->apply(buffer, out);
-    cv::imshow("Contrast stretching", out);
+
     if (showPics)
     {
+        cv::imshow("Contrast stretching", out);
         waitForSpace();
     }
     buffer = out;
@@ -418,9 +419,9 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
     // https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html
     cv::GaussianBlur(buffer, out, cv::Size(3,3), 0);
 //    cv::medianBlur(buffer, out, 5);
-    cv::imshow("Blur", out);
     if (showPics)
     {
+        cv::imshow("Blur", out);
         waitForSpace();
     }
     buffer = out;
@@ -462,9 +463,9 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
 
 
     out = gabor(buffer, orientationMatrix);
-    cv::imshow("Gabor", out);
     if (showPics)
     {
+        cv::imshow("Gabor", out);
         waitForSpace();
     }
     buffer = out;
@@ -482,40 +483,40 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
 
 
     cv::GaussianBlur(buffer, out, cv::Size(5,5), 0);
-    cv::imshow("Blur After", out);
     if (showPics)
     {
+        cv::imshow("Blur After", out);
         waitForSpace();
     }
     buffer = out;
 
     buffer.convertTo(buffer, CV_8UC1);
-    cv::imshow("Conv", buffer);
     if (showPics)
     {
+        cv::imshow("Conv", buffer);
         waitForSpace();
     }
 
     cv::adaptiveThreshold(buffer, out, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 9, 2);
     buffer = out;
-    cv::imshow("Threshold2", buffer);
     if (showPics)
     {
+        cv::imshow("Threshold2", buffer);
         waitForSpace();
     }
 
     cv::ximgproc::thinning(buffer, out, cv::ximgproc::ThinningTypes::THINNING_ZHANGSUEN);
     cv::bitwise_not(out, out);
-    cv::imshow("Thinned2", out);
     if (showPics)
     {
+        cv::imshow("Thinned2", out);
         waitForSpace();
     }
 
     buffer = out + mask;
-    cv::imshow("Masked2", buffer);
     if (showPics)
     {
+        cv::imshow("Masked2", buffer);
         waitForSpace();
     }
     out = buffer;
@@ -526,9 +527,9 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
     out.copyTo(imgCopy);
     printMinutaes(minutiaes, out);
 
-    cv::imshow("Minutaes", out);
     if (showPics)
     {
+        cv::imshow("Minutaes", out);
         waitForSpace();
     }
 
@@ -536,16 +537,16 @@ cv::Mat minutaesFromFingerprint(const std::string& fingerprintImageLocalPath, bo
 
     printMinutaes(minutiaes, imgCopy);
 
-    cv::imshow("Minutaes after validation", imgCopy);
     if (showPics)
     {
+        cv::imshow("Minutaes after validation", imgCopy);
         waitForSpace();
     }
 
     auto minutaeTemplate = getMinutaes(minutiaes, imgCopy);
-    cv::imshow("Minutaes template", minutaeTemplate);
     if (showPics)
     {
+        cv::imshow("Minutaes template", minutaeTemplate);
         waitForSpace();
     }
 
