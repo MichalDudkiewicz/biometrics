@@ -763,7 +763,7 @@ int main(int argc, char **argv) {
                 const int deltaX = qPos.x - scaleVoted * (cos(thetaVoted) * pPos.x + sin(thetaVoted) * pPos.y);
                 const int deltaY = qPos.y - scaleVoted * (-sin(thetaVoted) * pPos.x + cos(thetaVoted) * pPos.y);
 
-                if (abs(xVoted - deltaX) <= 30 && abs(yVoted - deltaY) <= 30)
+                if (abs(xVoted - deltaX) <= 15 && abs(yVoted - deltaY) <= 15)
                 {
                     matchedMinutaes++;
                     matchedMinutaesIdx.push_back(idx);
@@ -776,7 +776,7 @@ int main(int argc, char **argv) {
     std::cout << (float)matchedMinutaes << '\n';
     std::cout << maxVotes << '\n';
     std::cout << minutaesToCheck.size() << '\n';
-    if (minutaesToCheck.size() < 100 && (float)matchedMinutaes / (float)minutaesToCheck.size() >= 0.45f) {
+    if (minutaesToCheck.size() < 80 && (float)matchedMinutaes / (float)minutaesToCheck.size() >= 0.37f) {
         std::cout << "Matched!\n";
     }
     else
