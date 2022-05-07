@@ -691,6 +691,10 @@ int main(int argc, char **argv) {
     }
 
     int maxVotes = 0;
+    int kMax = 0;
+    int lMax = 0;
+    int mMax = 0;
+    int nMax = 0;
     for (const auto& p : patternMinutaes)
     {
         const auto pPos = std::get<0>(p);
@@ -717,6 +721,10 @@ int main(int argc, char **argv) {
                             if (A[k][l][m][n] > maxVotes)
                             {
                                 maxVotes = A[k][l][m][n];
+                                kMax = k;
+                                lMax = l;
+                                mMax = m;
+                                nMax = n;
                             }
                         }
                     }
@@ -725,7 +733,50 @@ int main(int argc, char **argv) {
         }
     }
 
-    if ((float)maxVotes / (float)minutaesToCheck.size() >= 0.04f && maxVotes > 2) {
+    const auto& scaleVoted = possibleScales[kMax];
+    const auto& thetaVoted = possibleThetas[lMax];
+    const auto& xVoted = mMax;
+    const auto& yVoted = nMax;
+
+//    std::cout << scale<< ' ' << thetaVoted<< ' ' << xVoted<< ' ' << yVoted << '\n';
+
+    int matchedMinutaes = 0;
+    std::vector<int> matchedMinutaesIdx;
+    for (const auto& p : patternMinutaes)
+    {
+        const auto pPos = std::get<0>(p);
+        const auto alpha = toDegrees(std::get<2>(p));
+        int idx = 0;
+        for (const auto& q : minutaesToCheck)
+        {
+            const auto matchedAlready = std::find_if(begin(matchedMinutaesIdx), end(matchedMinutaesIdx), [idx](int i){ return i == idx; });
+            if (matchedAlready != std::end(matchedMinutaesIdx))
+            {
+                idx++;
+                continue;
+            }
+
+            const auto beta = toDegrees(std::get<2>(q));
+            const auto qPos = std::get<0>(q);
+            if (abs(alpha + thetaVoted - beta) <= 45)
+            {
+                const int deltaX = qPos.x - scaleVoted * (cos(thetaVoted) * pPos.x + sin(thetaVoted) * pPos.y);
+                const int deltaY = qPos.y - scaleVoted * (-sin(thetaVoted) * pPos.x + cos(thetaVoted) * pPos.y);
+
+                if (abs(xVoted - deltaX) <= 30 && abs(yVoted - deltaY) <= 30)
+                {
+                    matchedMinutaes++;
+                    matchedMinutaesIdx.push_back(idx);
+                }
+            }
+            idx++;
+        }
+    }
+
+    std::cout << (float)matchedMinutaes << '\n';
+    std::cout << maxVotes << '\n';
+    std::cout << minutaesToCheck.size() << '\n';
+    if (minutaesToCheck.size() < 100 && (float)matchedMinutaes / (float)minutaesToCheck.size() >= 0.45f) {
         std::cout << "Matched!\n";
     }
     else
