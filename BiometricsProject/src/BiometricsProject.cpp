@@ -7,13 +7,14 @@
 #include <tuple>
 #include <numeric>
 #include <fstream>
-#include <filesystem>
 #include <optional>
 #include <cmath>
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#include <filesystem>
 namespace fs = std::filesystem;
 #else
+#include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
 #endif
 
