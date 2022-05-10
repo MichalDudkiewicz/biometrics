@@ -648,24 +648,33 @@ int toDegrees(MinutiaeDirection dir)
 
 enum Result { TRUEPOSITIVE, TRUENEGATIVE, FALSEPOSITIVE, FALSENEGATIVE };
 
+static std::map<std::string, std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>>> fingerprintToMinutaes;
 
-/*
- * Program do weryfikacji odcisku palca
- *
- * Obowiązkowe parametry:
- * pierwszy - lokalna ścieżka do zdjęcia z wzorcowym odciskiem palca
- * drugi - lokalna ścieżka do zdjęcia z weryfikowanym odciskiem palca
- *
- * Opcjonalne parametry:
- * ostatni - 0/1 określa czy pokazywać na ekranie zdjęcia etapów obróbki odcisku palca (true/false)
- *
- * Przykładowe wywołanie: BiometricsProject "102_1.tif" "101_1.tif" 0
- *
- */
 Result matchingResult(const std::string& fingerprintToVerify, const std::string& patternFingerprint, bool showPics = false)
 {
-    const auto patternMinutaes = minutaesFromFingerprint(patternFingerprint, showPics);
-    const auto minutaesToCheck = minutaesFromFingerprint(fingerprintToVerify, showPics);
+    std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> minutaesToCheck;
+    std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> patternMinutaes;
+
+    if (fingerprintToMinutaes.count(fingerprintToVerify))
+    {
+        minutaesToCheck = fingerprintToMinutaes.at(fingerprintToVerify);
+    }
+    else
+    {
+        minutaesToCheck = minutaesFromFingerprint(fingerprintToVerify, showPics);
+        fingerprintToMinutaes[fingerprintToVerify] = minutaesToCheck;
+    }
+
+    if (fingerprintToMinutaes.count(patternFingerprint))
+    {
+        patternMinutaes = fingerprintToMinutaes.at(patternFingerprint);
+    }
+    else
+    {
+        patternMinutaes = minutaesFromFingerprint(patternFingerprint, showPics);
+        fingerprintToMinutaes[patternFingerprint] = patternMinutaes;
+    }
+
 
     // @see https://github.com/opencv/opencv/blob/05b15943d6a42c99e5f921b7dbaa8323f3c042c6/samples/gpu/generalized_hough.cpp
     // @see http://amroamroamro.github.io/mexopencv/opencv/generalized_hough_demo.html
