@@ -18,6 +18,13 @@ namespace
     constexpr int M = 400;
     constexpr int N = 600;
     int A[K][L][M][N];
+
+    #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+        constexpr char systemSlash = '\\';
+    #else
+        constexpr char systemSlash = '/';
+    #endif
+
 }
 
 enum MinutiaeType
@@ -778,14 +785,16 @@ Result matchingResult(const std::string& fingerprintToVerify, const std::string&
 //    std::cout << minutaesToCheck.size() << '\n';
 
     std::vector<std::string> strings1;
-    std::istringstream f1(fingerprintToVerify);
+    const auto fingerprintToVerifySplit = fingerprintToVerify.substr(fingerprintToVerify.find(systemSlash));
+    std::istringstream f1(fingerprintToVerifySplit);
     std::string s1;
     while (getline(f1, s1, '_')) {
         strings1.push_back(s1);
     }
 
     std::vector<std::string> strings2;
-    std::istringstream f2(patternFingerprint);
+    const auto patternFingerprintSplit = patternFingerprint.substr(patternFingerprint.find(systemSlash));
+    std::istringstream f2(patternFingerprintSplit);
     std::string s2;
     while (getline(f2, s2, '_')) {
         strings2.push_back(s2);
@@ -793,7 +802,7 @@ Result matchingResult(const std::string& fingerprintToVerify, const std::string&
 
     bool shouldMatch = strings1[0] == strings2[0];
 
-    if (minutaesToCheck.size() < 80 && (float)matchedMinutaes / (float)minutaesToCheck.size() >= 0.37f) {
+    if ((float)matchedMinutaes / (float)minutaesToCheck.size() >= 0.45f) {
         if (shouldMatch)
         {
             return TRUEPOSITIVE;
@@ -815,18 +824,69 @@ Result matchingResult(const std::string& fingerprintToVerify, const std::string&
     }
 }
 
-int main() {
-    std::map<Result, int> resultsCounter = {{TRUEPOSITIVE, 0}, {TRUENEGATIVE, 0}, {FALSEPOSITIVE, 0}, {FALSENEGATIVE, 0}};
+int main(int argc, char **argv) {
+    bool showPics = false;
+    if (argc > 1)
+    {
+        std::string ifShowPics = argv[1];
+        if (ifShowPics == "1")
+        {
+            showPics = true;
+        }
+    }
 
-    for (auto const& patternFinger : fs::recursive_directory_iterator("fingerprints"))
+    std::set<std::string> uniqueIds;
+    for (auto const& patternFinger : fs::recursive_directory_iterator("fingerprintsPatterns"))
     {
         const auto patternFingerName = patternFinger.path().string();
-        for (auto const& fingerToVerify : fs::recursive_directory_iterator("fingerprints")) {
+        std::vector<std::string> strings1;
+        std::istringstream f1(patternFingerName);
+        std::string s1;
+        while (getline(f1, s1, '_')) {
+            strings1.push_back(s1);
+        }
 
-            const auto fingerToVerifyName = fingerToVerify.path().string();
-            Result result = matchingResult(patternFingerName, fingerToVerifyName);
+        const auto patternFingerNameSplit = strings1[0].substr(strings1[0].find(systemSlash));
+        uniqueIds.insert(patternFingerNameSplit);
+    }
 
-            resultsCounter[result] += 1;
+
+    std::map<Result, int> resultsCounter = {{TRUEPOSITIVE, 0}, {TRUENEGATIVE, 0}, {FALSEPOSITIVE, 0}, {FALSENEGATIVE, 0}};
+
+    for (auto const& patternFinger : fs::recursive_directory_iterator("fingerprintsToVerify"))
+    {
+        const auto patternFingerName = patternFinger.path().string();
+        std::vector<std::string> strings1;
+        std::istringstream f1(patternFingerName);
+        std::string s1;
+        while (getline(f1, s1, '_')) {
+            strings1.push_back(s1);
+        }
+
+        const auto patternFingerNameSplit = strings1[0].substr(strings1[0].find(systemSlash));
+        for (const auto& id : uniqueIds) {
+            std::vector<Result> results;
+            for (auto const &fingerToVerify: fs::recursive_directory_iterator("fingerprintsPatterns")) {
+                const auto fingerToVerifyName = fingerToVerify.path().string();
+                std::vector<std::string> strings2;
+                std::istringstream f2(fingerToVerifyName);
+                std::string s2;
+                while (getline(f2, s2, '_')) {
+                    strings2.push_back(s2);
+                }
+                const auto fingerToVerifyNameSplit = strings2[0].substr(strings2[0].find(systemSlash));
+                if (id == fingerToVerifyNameSplit) {
+                    Result result = matchingResult(patternFingerName, fingerToVerifyName, showPics);
+                    results.push_back(result);
+                }
+            }
+
+            if (!results.empty()) {
+                const auto resultIt = std::min_element(results.begin(), results.end());
+                resultsCounter[*resultIt] += 1;
+            } else {
+                throw std::runtime_error("not every fingerprint has its pattern for verification");
+            }
         }
     }
 
