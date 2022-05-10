@@ -1,4 +1,5 @@
-﻿#include "BiometricsProject.h"
+﻿#define _USE_MATH_DEFINES
+#include "BiometricsProject.h"
 #include "EasyBMP/EasyBMP.h"
 #include "opencv2/core/mat.hpp"
 #include <opencv2/opencv.hpp>
@@ -6,9 +7,15 @@
 #include <tuple>
 #include <numeric>
 #include <fstream>
-#include <experimental/filesystem>
+#include <filesystem>
+#include <optional>
+#include <cmath>
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+namespace fs = std::filesystem;
+#else
 namespace fs = std::experimental::filesystem;
+#endif
 
 namespace
 {
@@ -373,7 +380,7 @@ cv::Mat gabor(cv::Mat& myImg, const std::vector<std::vector<std::optional<double
                             int newC = c + m * newSobelInK;
 
                             for (int i = newR; i < orientationMatrix.size() && i < newR + newSobelInK; i++) {
-                                for (int j = newC; j < orientationMatrix[newC].size() && j < newC + newSobelInK; j++) {
+                                for (int j = newC; j < orientationMatrix[0].size() && j < newC + newSobelInK; j++) {
                                     const auto dir = orientationMatrix[i][j];
                                     if (dir.has_value()) {
                                         sum2 += dir.value();
