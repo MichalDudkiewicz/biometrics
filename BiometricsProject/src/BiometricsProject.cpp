@@ -5,6 +5,10 @@
 #include <opencv2/ximgproc.hpp>
 #include <tuple>
 #include <numeric>
+#include <fstream>
+#include <experimental/filesystem>
+
+namespace fs = std::experimental::filesystem;
 
 namespace
 {
@@ -45,6 +49,26 @@ bool operator==(const Pixel& pix1, const Pixel& pix2)
 bool operator!=(const Pixel& pix1, const Pixel& pix2)
 {
     return !(pix1 == pix2);
+}
+
+void waitForSpace()
+{
+    while(true)
+    {
+        const auto k = cv::waitKey();
+        if (k==32) // space on linux (?)
+        {
+            break;
+        }
+        else if (k==-1)
+        {
+            continue;
+        }
+        else
+        {
+            std::cout << "key pressed: " << k << '\n';
+        }
+    }
 }
 
 void validateMinutaes(std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> &minutaes, const cv::Mat& mat)
@@ -239,7 +263,8 @@ std::vector<std::tuple<Pixel, MinutiaeType, MinutiaeDirection>> retrieveMinutiae
                     }
                     else
                     {
-                        throw std::runtime_error("coś jest nie tak");
+                        // not minutae
+                        continue;
                     }
                     Pixel pixel(i, j);
 
@@ -408,26 +433,6 @@ cv::Mat gabor(cv::Mat& myImg, const std::vector<std::vector<std::optional<double
     }
 
     return img;
-}
-
-void waitForSpace()
-{
-    while(true)
-    {
-        const auto k = cv::waitKey();
-        if (k==32) // space on linux (?)
-        {
-            break;
-        }
-        else if (k==-1)
-        {
-            continue;
-        }
-        else
-        {
-            std::cout << "key pressed: " << k << '\n';
-        }
-    }
 }
 
 /*
@@ -641,6 +646,8 @@ int toDegrees(MinutiaeDirection dir)
     }
 }
 
+enum Result { TRUEPOSITIVE, TRUENEGATIVE, FALSEPOSITIVE, FALSENEGATIVE };
+
 
 /*
  * Program do weryfikacji odcisku palca
@@ -655,24 +662,8 @@ int toDegrees(MinutiaeDirection dir)
  * Przykładowe wywołanie: BiometricsProject "102_1.tif" "101_1.tif" 0
  *
  */
-int main(int argc, char **argv) {
-    if (argc < 3)
-    {
-        throw std::runtime_error("pass 2 arguments: pattern fingerprint image (first param) and fingerprint image to verify (second param)");
-    }
-
-    std::string fingerprintToVerify = argv[2];
-    std::string patternFingerprint = argv[1];
-
-    bool showPics = false;
-    if (argc > 3)
-    {
-        std::string ifShowPics = argv[3];
-        if (ifShowPics == "1")
-        {
-            showPics = true;
-        }
-    }
+Result matchingResult(const std::string& fingerprintToVerify, const std::string& patternFingerprint, bool showPics = false)
+{
     const auto patternMinutaes = minutaesFromFingerprint(patternFingerprint, showPics);
     const auto minutaesToCheck = minutaesFromFingerprint(fingerprintToVerify, showPics);
 
@@ -773,15 +764,77 @@ int main(int argc, char **argv) {
         }
     }
 
-    std::cout << (float)matchedMinutaes << '\n';
-    std::cout << maxVotes << '\n';
-    std::cout << minutaesToCheck.size() << '\n';
+//    std::cout << (float)matchedMinutaes << '\n';
+//    std::cout << maxVotes << '\n';
+//    std::cout << minutaesToCheck.size() << '\n';
+
+    std::vector<std::string> strings1;
+    std::istringstream f1(fingerprintToVerify);
+    std::string s1;
+    while (getline(f1, s1, '_')) {
+        strings1.push_back(s1);
+    }
+
+    std::vector<std::string> strings2;
+    std::istringstream f2(patternFingerprint);
+    std::string s2;
+    while (getline(f2, s2, '_')) {
+        strings2.push_back(s2);
+    }
+
+    bool shouldMatch = strings1[0] == strings2[0];
+
     if (minutaesToCheck.size() < 80 && (float)matchedMinutaes / (float)minutaesToCheck.size() >= 0.37f) {
-        std::cout << "Matched!\n";
+        if (shouldMatch)
+        {
+            return TRUEPOSITIVE;
+        }
+        else
+        {
+            return FALSEPOSITIVE;
+        }
     }
     else
     {
-        std::cout << "Not matched!\n";
+        if (shouldMatch) {
+            return FALSENEGATIVE;
+        }
+        else
+        {
+            return TRUENEGATIVE;
+        }
     }
-	return 0;
+}
+
+int main() {
+    std::map<Result, int> resultsCounter = {{TRUEPOSITIVE, 0}, {TRUENEGATIVE, 0}, {FALSEPOSITIVE, 0}, {FALSENEGATIVE, 0}};
+
+    for (auto const& patternFinger : fs::recursive_directory_iterator("fingerprints"))
+    {
+        const auto patternFingerName = patternFinger.path().string();
+        for (auto const& fingerToVerify : fs::recursive_directory_iterator("fingerprints")) {
+
+            const auto fingerToVerifyName = fingerToVerify.path().string();
+            Result result = matchingResult(patternFingerName, fingerToVerifyName);
+
+            resultsCounter[result] += 1;
+        }
+    }
+
+    const int TP = resultsCounter[TRUEPOSITIVE];
+    const int TN = resultsCounter[TRUENEGATIVE];
+    const int FN = resultsCounter[FALSENEGATIVE];
+    const int FP = resultsCounter[FALSEPOSITIVE];
+
+    const float FAR = (float)FP/(float)(FP+TN);
+    const float FRR = (float)FN/(float)(FN+TP);
+    const float GAR = 1.0f - FRR;
+
+    std::cout << "TP = " << TP << '\n';
+    std::cout << "TN = " << TN << '\n';
+    std::cout << "FP = " << FP << '\n';
+    std::cout << "FN = " << FN << '\n';
+    std::cout << "FAR = " << FAR << '\n';
+    std::cout << "FRR = " << FRR << '\n';
+    std::cout << "GAR = " << GAR << '\n';
 }

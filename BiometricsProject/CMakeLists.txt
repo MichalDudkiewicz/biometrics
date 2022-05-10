@@ -2,18 +2,21 @@
 
 set(CMAKE_CXX_STANDARD 17)
 
+set(CMAKE_CXX_FLAGS "-lstdc++fs" )
+
 #tutaj dodajemy cpp-ki do naszej biblioteki do morfologii
-add_executable (BiometricsProject
+add_executable (${PROJECT_NAME}
         src/BiometricsProject.cpp
          )
 
 add_subdirectory (thirdparty)
 
-target_include_directories(BiometricsProject PUBLIC include)
-target_include_directories(BiometricsProject PRIVATE thirdparty)
+target_include_directories(${PROJECT_NAME} PUBLIC include)
+target_include_directories(${PROJECT_NAME} PRIVATE thirdparty)
 
-target_link_libraries(BiometricsProject PRIVATE EasyBMP)
+target_link_libraries(${PROJECT_NAME} PRIVATE EasyBMP)
 
 find_package( OpenCV REQUIRED )
-target_include_directories(BiometricsProject PUBLIC ${OpenCV_INCLUDE_DIRS})
-target_link_libraries(BiometricsProject PUBLIC ${OpenCV_LIBS})
+target_include_directories(${PROJECT_NAME} PUBLIC ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${OpenCV_LIBS})
+target_link_libraries(${PROJECT_NAME} PRIVATE stdc++fs)
