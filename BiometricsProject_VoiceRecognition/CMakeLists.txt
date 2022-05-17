@@ -13,3 +13,4 @@ target_link_libraries(BiometricsProject_VoiceRecognition PRIVATE "C:/Program Fil
 target_link_libraries(BiometricsProject_VoiceRecognition PRIVATE "C:/Program Files (x86)/Aquila/lib/Ooura_fft.lib")
 
 target_include_directories(BiometricsProject_VoiceRecognition PUBLIC "C:/Program Files (x86)/Aquila/include")
+
