@@ -5,3 +5,4 @@ set(CMAKE_CXX_STANDARD 17)
 project (BiometricsProject)
 
 add_subdirectory (BiometricsProject)
+add_subdirectory (BiometricsProject_VoiceRecognition)
