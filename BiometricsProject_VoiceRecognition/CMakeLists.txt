@@ -10,5 +10,6 @@ add_executable (BiometricsProject_VoiceRecognition
 target_include_directories(BiometricsProject_VoiceRecognition PUBLIC include)
 
 target_link_libraries(BiometricsProject_VoiceRecognition PRIVATE "C:/Program Files (x86)/Aquila/lib/Aquila.lib")
+target_link_libraries(BiometricsProject_VoiceRecognition PRIVATE "C:/Program Files (x86)/Aquila/lib/Ooura_fft.lib")
 
 target_include_directories(BiometricsProject_VoiceRecognition PUBLIC "C:/Program Files (x86)/Aquila/include")
