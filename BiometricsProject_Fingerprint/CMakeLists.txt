@@ -7,21 +7,21 @@ if (UNIX)
 endif (UNIX)
 
 #tutaj dodajemy cpp-ki do naszej biblioteki do morfologii
-add_executable (${PROJECT_NAME}
+add_executable (Fingerprint
         src/BiometricsProject.cpp
          )
 
 add_subdirectory (thirdparty)
 
-target_include_directories(${PROJECT_NAME} PUBLIC include)
-target_include_directories(${PROJECT_NAME} PRIVATE thirdparty)
+target_include_directories(Fingerprint PUBLIC include)
+target_include_directories(Fingerprint PRIVATE thirdparty)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE EasyBMP)
+target_link_libraries(Fingerprint PRIVATE EasyBMP)
 
 find_package( OpenCV REQUIRED )
 target_include_directories(${PROJECT_NAME} PUBLIC ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${OpenCV_LIBS})
 
 if (UNIX)
-target_link_libraries(${PROJECT_NAME} PRIVATE stdc++fs)
+target_link_libraries(Fingerprint PRIVATE stdc++fs)
 endif (UNIX)
