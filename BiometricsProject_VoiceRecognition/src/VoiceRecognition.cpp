@@ -37,7 +37,7 @@ int main()
     //const std::size_t SIZE = 64;
     const Aquila::FrequencyType f_lp = 500;
 
-    Aquila::WaveFile sound_1("FAML_Sa.wav");
+    Aquila::WaveFile sound_1("100hz.wav");
 
     const std::size_t SIZE = 65536;
     const Aquila::FrequencyType sampleFreq = sound_1.getSampleFrequency();
@@ -69,7 +69,6 @@ int main()
         [](Aquila::ComplexType x, Aquila::ComplexType y) { return x * y; }
     );
 
-    //std::vector<Aquila::SampleType> x1;
     double x1[SIZE];
     fft->ifft(spectrum, x1);
     
@@ -78,26 +77,34 @@ int main()
     Aquila::WaveFile::save(lowPassSound,"newSound.wav");
 
     //podzia³ na fragmenty
-    Aquila::FramesCollection frameCollection(sound_1, SIZE);
+    //Aquila::FramesCollection frameCollection(sound_1, SIZE);
+    int crossingPoints = 0;
 
-    for (int i = 0; i < frameCollection.count(); i++)
+    for (int i = 0; i < SIZE-1; i++)
     {
-        std::cout << sound_1.getAudioLength() << std::endl;
+        if (!signbit(x1[i + 1]) != !signbit(x1[i])) 
+            crossingPoints++;
     }
 
-    //Aquila::DtwDataType data_1 = ProcessSound(sound_1, SIZE);
 
+    float signalLength = lowPassSound.getSamplesCount() / lowPassSound.getSampleFrequency();
 
-    //Aquila::WaveFile sound_2("MCBR_Sa.wav");
+    int oscillations = crossingPoints / 2;
 
-    //Aquila::DtwDataType data_2 = ProcessSound(sound_2, SIZE);
+    int calculatedFrequency = oscillations / signalLength;
 
-    ////porównanie dŸwiêków
-    //Aquila::Dtw dtw(Aquila::euclideanDistance, Aquila::Dtw::PassType::Diagonals);
-    //
-    //double distance_1 = dtw.getDistance(data_1, data_2);
-    //std::cout << "Distance : " << distance_1 << std::endl;
+    //std::cout << oscillations << std::endl;
 
+    if(calculatedFrequency > 60 && calculatedFrequency < 180)
+        std::cout << "Speaker gender is Male and frequency is: " << calculatedFrequency << std::endl;
+    else if(calculatedFrequency > 180 && calculatedFrequency < 300)
+        std::cout << "Speaker gender is Female and frequency is: " << calculatedFrequency << std::endl;
+    else
+    std::cout << "Frequency is: " << calculatedFrequency << std::endl;
 
     return 0;
 }
+
+//https://medium.com/the-seekers-project/algorithmic-frequency-pitch-detection-series-part-1-making-a-simple-pitch-tracker-using-zero-9991327897a4 - ZCR usage
+//https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3293852/ - voice frequencies
+//https://aquila-dsp.org/articles/updated-frequency-domain-filtering-example/ - low pass filter implementation
