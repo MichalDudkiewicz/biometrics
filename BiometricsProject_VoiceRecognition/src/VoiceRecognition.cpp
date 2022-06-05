@@ -87,7 +87,17 @@ int main()
 {
     // input signal parameters
     //const std::size_t SIZE = 64;
-    const Aquila::FrequencyType f_lp = 400;
+
+    int trueMaleResults = 0;
+    int falseMaleResults = 0;
+    int trueFemaleResults = 0;
+    int falseFemaleResults = 0;
+    int notClassified = 0;
+
+    int totalFemaleSamples = 0;
+    int totalMaleSamples = 0;
+
+    const Aquila::FrequencyType f_lp = 377;
 
     std::vector<Aquila::WaveFile> databaseFiles;
 
@@ -95,7 +105,7 @@ int main()
 
     for (const auto& file : std::filesystem::directory_iterator::directory_iterator(path))
     {
-        std::cout << file.path() << std::endl;
+        //std::cout << file.path() << std::endl;
         databaseFiles.push_back(Aquila::WaveFile(file.path().string()));
     }
 
@@ -114,10 +124,50 @@ int main()
         }
 
 
-        std::cout << Median(frequencies) << std::endl;
+        //std::cout << Median(frequencies) << std::endl;
+
+        float finalValue = Median(frequencies);
+
+        if (finalValue > 60 && finalValue < 190)
+        {
+            if (file.getFilename().find("MAL") != std::string::npos)
+                trueMaleResults++;
+            else
+                falseMaleResults++;
+            
+        }
+        else if (finalValue > 190 && finalValue < 300)
+        {
+            if (file.getFilename().find("FEM") != std::string::npos)
+                trueFemaleResults++;
+            else
+                falseFemaleResults++;
+        }
+        else
+        {
+            notClassified++;
+        }
+        if (file.getFilename().find("MAL") != std::string::npos)
+            totalMaleSamples++;
+        else if (file.getFilename().find("FEM") != std::string::npos)
+            totalFemaleSamples++;
     }
 
+    int totalResults = databaseFiles.size();
 
+    float totalCorrect = ((float)trueFemaleResults + (float)trueMaleResults);
+
+    std::cout << "Total number of checked samples: " << totalResults << std::endl;
+    std::cout << "Total correct results are: " << totalCorrect << std::endl;
+    std::cout << "Total accuracy is: " << totalCorrect/totalResults << std::endl << std::endl;
+
+    std::cout << "Total number of male samples: " << totalMaleSamples << std::endl;
+    std::cout << "Total correct male results are: " << trueMaleResults << std::endl;
+    std::cout << "Total false male results are: " << falseMaleResults << std::endl << std::endl;
+
+    std::cout << "Total number of female samples: " << totalFemaleSamples << std::endl;
+    std::cout << "Total correct female results are: " << trueFemaleResults << std::endl;
+    std::cout << "Total false female results are: " << falseFemaleResults << std::endl << std::endl;
 
     //if(calculatedFrequency > 60 && calculatedFrequency < 180)
     //    std::cout << "Speaker gender is Male and frequency is: " << calculatedFrequency << std::endl;
