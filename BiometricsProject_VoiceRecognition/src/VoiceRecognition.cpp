@@ -163,11 +163,11 @@ int main()
 
     std::cout << "Total number of male samples: " << totalMaleSamples << std::endl;
     std::cout << "Total correct male results are: " << trueMaleResults << std::endl;
-    std::cout << "Total false male results are: " << falseMaleResults << std::endl << std::endl;
+    std::cout << "Total unrecognized male results are: " << falseFemaleResults << std::endl << std::endl;
 
     std::cout << "Total number of female samples: " << totalFemaleSamples << std::endl;
     std::cout << "Total correct female results are: " << trueFemaleResults << std::endl;
-    std::cout << "Total false female results are: " << falseFemaleResults << std::endl << std::endl;
+    std::cout << "Total unrecognized female results are: " << falseMaleResults << std::endl << std::endl;
 
     //if(calculatedFrequency > 60 && calculatedFrequency < 180)
     //    std::cout << "Speaker gender is Male and frequency is: " << calculatedFrequency << std::endl;
